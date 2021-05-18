@@ -26,5 +26,6 @@ while not gameWon:
     gameWon = x.CheckVictory(row, col)
     if gameWon:
         break
-    x.flip_player()
+    else:
+        x.flip_player()
 print("Player ", str(x.player_turn) + " won!")
