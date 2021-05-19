@@ -5,13 +5,18 @@
 import time
 import numpy as np
 
+HUMAN = +1 
+BOT = -1
+
 class TicTacToe:
     def __init__(self):
-        """Player is 1, enemy is -1."""
+        """
+        Player is 1, enemy is -1. In hindsight, I should've made these constants HUMAN, COMP or something but oh well.
+        """
         self.board = np.zeros((3,3))
 
         # Player X always plays first
-        self.player_turn = 1 # We are 1, Enemy is 2.
+        self.current_player = HUMAN # We are 1, Enemy is -1. Human starts first.
 
     def draw_board(self):
         print(self.board)
@@ -31,65 +36,96 @@ class TicTacToe:
         Checks if position on board is valid and updates the board based on the current player turn
         """
         if self.is_valid(self.board, row, col):
-            self.board[row][col] = self.player_turn
+            self.board[row][col] = self.current_player
             return True
         
         return False
 
-    def CheckVictory(self, x, y):
-        board = self.board
-        #check if previous move caused a win on vertical line  -> Checks if they are equivalent for first column.
-        if board[0][y] == board[1][y] == board [2][y]:
-            return True
 
-        #check if previous move caused a win on horizontal line 
-        if board[x][0] == board[x][1] == board [x][2]:
-            return True
+    
+    def is_terminal(self) -> bool:
+        """
+        Uses board and player to see if that player won.
+        This function tests if a specific player wins. Possibilities:
+        * Three rows    [X X X] or [O O O]
+        * Three cols    [X X X] or [O O O]
+        * Two diagonals [X X X] or [O O O]
+        :return: True if the player wins
+        """
+        state = self.board
+        player = self.current_player
+        win_states = [
+        [state[0][0], state[0][1], state[0][2]],
+        [state[1][0], state[1][1], state[1][2]],
+        [state[2][0], state[2][1], state[2][2]],
+        [state[0][0], state[1][0], state[2][0]],
+        [state[0][1], state[1][1], state[2][1]],
+        [state[0][2], state[1][2], state[2][2]],
+        [state[0][0], state[1][1], state[2][2]],
+        [state[2][0], state[1][1], state[0][2]],
+        ]
 
-        #check if previous move was on the main diagonal and caused a win
-        if x == y and board[0][0] == board[1][1] == board [2][2]:
+        if [player, player, player] in win_states:
             return True
+        else:
+            return False
 
-        #check if previous move was on the secondary diagonal and caused a win
-        if x + y == 2 and board[0][2] == board[1][1] == board [2][0]:
-            return True
-
-        return False         
     
 
     def flip_player(self):
         # Changes player turn.
-        if self.player_turn == 1:
-            self.player_turn = -1
+        if self.current_player == HUMAN:
+            self.current_player = BOT
         else:
-            self.player_turn = 1
+            self.current_player = HUMAN
+    
 
-# x = TicTacToe()
+    ##### BEGIN MINIMAX STUFF #####
+    ###############################
 
-# gameWon = False
-# while not gameWon:
-#     x.draw_board()
 
-#     # Keep them looped until they give a valid answer to play.
-#     keepasking = True
-#     while keepasking:
-#         try:
-#             row = int(input("Input row"))
-#             col = int(input("Input column "))
-#         except:
-#             print("That's not an integer you mongoloid.")
+    def empty_cells(self) -> list:
+        """
+        Returns list of empty cells in board, O(n^2) as tuples [(x,y),(x,y),...]
+        """
+        empty_cells = []
+        for row in self.board:
+            # rows
+            for col in row:
+                #col in row therefore x,y -> [row][col].
+                if self.board[row][col] == 0:
+                    empty_cells.append((row, col))
+
+    def evaluate(self) -> int:
+        """
+        Returns int 1 or -1 based on if computer won (1 if it did).
+        Says good job! if computer wins, and bad job if not (by +1 or -1).
+        """
+        current_player = self.current_player
+        if self.is_terminal():
+            # Checks who wins and assigns score from there.
+            if current_player == HUMAN: # If human win
+                score = -1
+
+            elif current_player == BOT:
+                score = 1
+
+            else:
+                score = 0
+        return score
+    
+    def minimax(self, depth, maximisingPlayer):
+        if depth == 0 or self.is_terminal(self):
+            score = self.evaluate(self)
+
+        if maximisingPlayer:
+            value = -np.Infinity
+            for child in self.empty_cells(self):
+                value = max(value, self.minimax(child, depth-1, not maximisingPlayer)) # This line might be wrong btw. (Maximising might be False).
         
-#         else: # If it's an int
-#             valid_board = x.update_board(row, col)
-#             if valid_board == False:
-#                 print("Your row or col is out of range. Try ranges 0-2 and make sure there's nothing there already.")
-#             else: # If it's a valid board
-#                 keepasking = False
+        else: #minimising player
+            value = np.Infinity
+            for child in self.empty_cells(self):
+                value = min(value, self.minimax(child, depth-1, maximisingPlayer)) #Might be wrong (maximising might just be True)
 
-#     # Once the entity added a new piece on the board.
-#     gameWon = x.CheckVictory(row, col)
-#     if gameWon:
-
-#         break
-#     x.flip_player()
-# print("Player ", str(x.player_turn) + " won!")
+        return value
